@@ -174,9 +174,9 @@ def _load_emqtl_edges(
                 c_name = str(row[0])
                 g_name = str(row[1])
                 
-                if not debug_printed:
-                    print(f"   [Debug] Data from file -> cpg: '{c_name}', gene: '{g_name}'")
-                    debug_printed = True
+                # if not debug_printed:
+                #     print(f"   [Debug] Data from file -> cpg: '{c_name}', gene: '{g_name}'")
+                #     debug_printed = True
                     
                 if c_name not in cpg_idx or g_name not in gene_idx:
                     continue
