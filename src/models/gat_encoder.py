@@ -261,6 +261,7 @@ thông tin sinh học. Sau đó, dùng phép chiếu (Projection) để tạo ra
 Patient-Specific Embeddings từ hồ sơ Multi-omics của từng bệnh nhân.
 """
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -346,10 +347,15 @@ class MultiOmicGATModule(nn.Module):
         # x_dict hiện chứa các vector thể hiện tính chất sinh học (Node, Hidden)
         # Ta dùng phép nhân ma trận (B, Node) x (Node, Hidden) -> (B, Hidden)
         
-        # SỬA 3 DÒNG NÀY: Dùng LayerNorm để kìm hãm sự bùng nổ giá trị do cộng dồn hàng chục ngàn feature
-        z_gene = self.out_norm_gene(torch.matmul(batch["gene"], x_dict["gene"]))
-        z_cpg = self.out_norm_cpg(torch.matmul(batch["meth"], x_dict["cpg"]))
-        z_mirna = self.out_norm_mirna(torch.matmul(batch["mirna"], x_dict["mirna"]))
+        # Lấy số lượng features của từng omics
+        d_gene = batch["gene"].shape[1]
+        d_cpg = batch["meth"].shape[1]
+        d_mirna = batch["mirna"].shape[1]
+
+        # Áp dụng Scaled Dot-Product (chia cho căn bậc 2 của số chiều)
+        z_gene = self.out_norm_gene(torch.matmul(batch["gene"], x_dict["gene"]) / math.sqrt(d_gene))
+        z_cpg = self.out_norm_cpg(torch.matmul(batch["meth"], x_dict["cpg"]) / math.sqrt(d_cpg))
+        z_mirna = self.out_norm_mirna(torch.matmul(batch["mirna"], x_dict["mirna"]) / math.sqrt(d_mirna))
 
         # Bạn có thể phát triển thêm return_attention sau (hiện tại HeteroConv k hỗ trợ trả attention dict tự động)
         if return_attention:
