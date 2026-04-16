@@ -310,6 +310,11 @@ class MultiOmicGATModule(nn.Module):
             }))
             
         self.dropout = nn.Dropout(dropout)
+        
+        # THÊM 3 LỚP NORMALIZATION NÀY VÀO CUỐI HÀM __init__
+        self.out_norm_gene = nn.LayerNorm(hidden_dim)
+        self.out_norm_cpg = nn.LayerNorm(hidden_dim)
+        self.out_norm_mirna = nn.LayerNorm(hidden_dim)
 
     def forward(self, batch: dict, graph: HeteroData, return_attention: bool = False):
         """
@@ -341,9 +346,10 @@ class MultiOmicGATModule(nn.Module):
         # x_dict hiện chứa các vector thể hiện tính chất sinh học (Node, Hidden)
         # Ta dùng phép nhân ma trận (B, Node) x (Node, Hidden) -> (B, Hidden)
         
-        z_gene = torch.matmul(batch["gene"], x_dict["gene"])
-        z_cpg = torch.matmul(batch["meth"], x_dict["cpg"])
-        z_mirna = torch.matmul(batch["mirna"], x_dict["mirna"])
+        # SỬA 3 DÒNG NÀY: Dùng LayerNorm để kìm hãm sự bùng nổ giá trị do cộng dồn hàng chục ngàn feature
+        z_gene = self.out_norm_gene(torch.matmul(batch["gene"], x_dict["gene"]))
+        z_cpg = self.out_norm_cpg(torch.matmul(batch["meth"], x_dict["cpg"]))
+        z_mirna = self.out_norm_mirna(torch.matmul(batch["mirna"], x_dict["mirna"]))
 
         # Bạn có thể phát triển thêm return_attention sau (hiện tại HeteroConv k hỗ trợ trả attention dict tự động)
         if return_attention:
