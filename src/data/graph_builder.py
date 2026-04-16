@@ -159,10 +159,17 @@ def _load_emqtl_edges(
             usecols=[cpg_col, gene_col, pval_col],
             dtype={cpg_col: str, gene_col: str, pval_col: float},
         ):
-            chunk = chunk[chunk[pval_col] < pval_thresh]
-            for row in chunk.itertuples(index=False):
-                c_name = getattr(row, cpg_col)
-                g_name = getattr(row, gene_col)
+            # 1. Lọc theo p-value
+            chunk_filtered = chunk[chunk[pval_col] < pval_thresh]
+            
+            # 2. Chọn đúng 2 cột tạo cạnh và cố định thứ tự để truy cập bằng index
+            chunk_edges = chunk_filtered[[cpg_col, gene_col]]
+            
+            # 3. Thêm name=None để trả về tuple thường, truy cập an toàn bằng row[0], row[1]
+            for row in chunk_edges.itertuples(index=False, name=None):
+                c_name = str(row[0])
+                g_name = str(row[1])
+                
                 if c_name not in cpg_idx or g_name not in gene_idx:
                     continue
                 c_i = cpg_idx[c_name]
@@ -275,17 +282,6 @@ def _load_mirna_edges(
       miRNA  Target Gene  Species(miRNA)  Species(Target Gene)  Experiments  ...
     Cột quan trọng: 'miRNA' và 'Target Gene'
     """
-    if not os.path.exists(mti_file):
-        return None
-
-    print("   Parsing hsa_MTI.csv...", end=" ", flush=True)
-
-    df = pd.read_csv(mti_file)
-
-    # Tự động detect tên cột
-    mirna_col = _find_col(df.columns.tolist(), ["miRNA", "mirna", "mature_mirna"])
-    gene_col  = _find_col(df.columns.tolist(), ["Target Gene", "target_gene",
-                                                  "gene_symbol", "Gene Symbol"])
     if not mirna_col or not gene_col:
         print(f"không nhận ra cột (found: {df.columns.tolist()[:5]})")
         return None
@@ -293,9 +289,13 @@ def _load_mirna_edges(
     src_list, dst_list = [], []
     seen = set()
 
-    for row in df[[mirna_col, gene_col]].itertuples(index=False):
-        m = str(getattr(row, mirna_col)).strip()
-        g = str(getattr(row, gene_col)).strip()
+    # Chỉ lọc ra 2 cột cần thiết, set name=None để trả về tuple thường
+    df_filtered = df[[mirna_col, gene_col]]
+    
+    for row in df_filtered.itertuples(index=False, name=None):
+        m = str(row[0]).strip() # mirna_col luôn ở index 0
+        g = str(row[1]).strip() # gene_col luôn ở index 1
+        
         if m not in mirna_idx or g not in gene_idx:
             continue
         key = (mirna_idx[m], gene_idx[g])
