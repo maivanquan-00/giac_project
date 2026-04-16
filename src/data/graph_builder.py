@@ -154,9 +154,9 @@ def _load_emqtl_edges(
         print(f"   Parsing emQTL {ct}... ", end="", flush=True)
         count_before = len(src_list)
 
-        print(f"   [Debug] Sample CpG in node list : {list(cpg_idx.keys())[:3]}")
-        print(f"   [Debug] Sample Gene in node list: {list(gene_idx.keys())[:3]}")
-        debug_printed = False
+        # print(f"   [Debug] Sample CpG in node list : {list(cpg_idx.keys())[:3]}")
+        # print(f"   [Debug] Sample Gene in node list: {list(gene_idx.keys())[:3]}")
+        # debug_printed = False
 
         for chunk in pd.read_csv(
             fpath, sep="\t", chunksize=200_000,
@@ -237,6 +237,9 @@ def _load_ppi_edges(
     ensp_to_gene = (
         preferred.groupby("protein_id")["alias"]
         .first()
+        .astype(str)       # Ép kiểu về chuỗi
+        .str.strip()       # Xóa khoảng trắng 2 đầu
+        .str.upper()       # ÉP TOÀN BỘ THÀNH CHỮ IN HOA
         .to_dict()
     )
     print(f"{len(ensp_to_gene):,} proteins mapped")
@@ -251,12 +254,15 @@ def _load_ppi_edges(
         dtype={"protein1": str, "protein2": str, "combined_score": int},
     ):
         chunk = chunk[chunk["combined_score"] >= score_thresh]
-        for row in chunk.itertuples(index=False):
-            p1 = row.protein1  # "9606.ENSP00000..."
-            p2 = row.protein2
+        
+        # Thêm name=None để tăng tốc độ và tránh lỗi namedtuple như đã làm ở emQTL
+        for row in chunk.itertuples(index=False, name=None):
+            p1 = row[0]
+            p2 = row[1]
 
-            g1 = ensp_to_gene.get(p1, "")
-            g2 = ensp_to_gene.get(p2, "")
+            # Khi lấy ra cũng cần strip và upper để đảm bảo khớp 100%
+            g1 = ensp_to_gene.get(p1, "").strip().upper()
+            g2 = ensp_to_gene.get(p2, "").strip().upper()
 
             if g1 not in gene_idx or g2 not in gene_idx:
                 continue
