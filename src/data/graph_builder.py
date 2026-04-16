@@ -154,6 +154,10 @@ def _load_emqtl_edges(
         print(f"   Parsing emQTL {ct}... ", end="", flush=True)
         count_before = len(src_list)
 
+        print(f"   [Debug] Sample CpG in node list : {list(cpg_idx.keys())[:3]}")
+        print(f"   [Debug] Sample Gene in node list: {list(gene_idx.keys())[:3]}")
+        debug_printed = False
+
         for chunk in pd.read_csv(
             fpath, sep="\t", chunksize=200_000,
             usecols=[cpg_col, gene_col, pval_col],
@@ -170,6 +174,10 @@ def _load_emqtl_edges(
                 c_name = str(row[0])
                 g_name = str(row[1])
                 
+                if not debug_printed:
+                    print(f"   [Debug] Data from file -> cpg: '{c_name}', gene: '{g_name}'")
+                    debug_printed = True
+                    
                 if c_name not in cpg_idx or g_name not in gene_idx:
                     continue
                 c_i = cpg_idx[c_name]
@@ -282,6 +290,17 @@ def _load_mirna_edges(
       miRNA  Target Gene  Species(miRNA)  Species(Target Gene)  Experiments  ...
     Cột quan trọng: 'miRNA' và 'Target Gene'
     """
+    if not os.path.exists(mti_file):
+        return None
+
+    print("   Parsing hsa_MTI.csv...", end=" ", flush=True)
+
+    df = pd.read_csv(mti_file)
+
+    # Tự động detect tên cột
+    mirna_col = _find_col(df.columns.tolist(), ["miRNA", "mirna", "mature_mirna"])
+    gene_col  = _find_col(df.columns.tolist(), ["Target Gene", "target_gene",
+                                                  "gene_symbol", "Gene Symbol"])
     if not mirna_col or not gene_col:
         print(f"không nhận ra cột (found: {df.columns.tolist()[:5]})")
         return None
