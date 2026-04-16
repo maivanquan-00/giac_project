@@ -254,6 +254,8 @@ def _load_ppi_edges(
     src_list, dst_list = [], []
     seen = set()  # tránh duplicate
 
+    debug_ppi_printed = False
+    
     for chunk in pd.read_csv(
         links_file, sep=" ", chunksize=500_000,
         dtype={"protein1": str, "protein2": str, "combined_score": int},
@@ -269,7 +271,7 @@ def _load_ppi_edges(
             if not debug_ppi_printed:
                 print(f"   [Debug PPI] Raw File - p1: '{p1}', p2: '{p2}'")
                 debug_ppi_printed = True
-                
+
             # Khi lấy ra cũng cần strip và upper để đảm bảo khớp 100%
             g1 = ensp_to_gene.get(p1, "").strip().upper()
             g2 = ensp_to_gene.get(p2, "").strip().upper()
