@@ -222,24 +222,43 @@ def _load_ppi_edges(
 
     print("   Building ENSP→symbol map từ alias file...", end=" ", flush=True)
 
-    # Đọc alias file — giữ lại các alias từ nguồn gene symbol
+    # # Đọc alias file — giữ lại các alias từ nguồn gene symbol
+    # alias_df = pd.read_csv(alias_file, sep="\t", comment="#",
+    #                        names=["protein_id", "alias", "source"])
+    # # Ưu tiên nguồn BioMart_HUGO hoặc HGNC
+    # preferred = alias_df[alias_df["source"].str.contains(
+    #     "BioMart_HUGO|HGNC|gene_name", case=False, na=False
+    # )]
+    # # Nếu không có nguồn ưu tiên, lấy tất cả
+    # if len(preferred) == 0:
+    #     preferred = alias_df
+
+    # # Tạo map: ENSP_full_id → gene_symbol (lấy alias đầu tiên cho mỗi protein)
+    # ensp_to_gene = (
+    #     preferred.groupby("protein_id")["alias"]
+    #     .first()
+    #     .astype(str)       # Ép kiểu về chuỗi
+    #     .str.strip()       # Xóa khoảng trắng 2 đầu
+    #     .str.upper()       # ÉP TOÀN BỘ THÀNH CHỮ IN HOA
+    #     .to_dict()
+    # )
+    # print(f"{len(ensp_to_gene):,} proteins mapped")
+
+    # Đọc alias file
     alias_df = pd.read_csv(alias_file, sep="\t", comment="#",
                            names=["protein_id", "alias", "source"])
-    # Ưu tiên nguồn BioMart_HUGO hoặc HGNC
-    preferred = alias_df[alias_df["source"].str.contains(
-        "BioMart_HUGO|HGNC|gene_name", case=False, na=False
-    )]
-    # Nếu không có nguồn ưu tiên, lấy tất cả
-    if len(preferred) == 0:
-        preferred = alias_df
+    
+    # 1. Ép chuỗi và in hoa toàn bộ cột alias
+    alias_df["alias_upper"] = alias_df["alias"].astype(str).str.strip().str.upper()
+    
+    # 2. CHỈ lọc những alias khớp với tập Gene của bạn
+    valid_genes = set(gene_idx.keys())
+    preferred = alias_df[alias_df["alias_upper"].isin(valid_genes)]
 
-    # Tạo map: ENSP_full_id → gene_symbol (lấy alias đầu tiên cho mỗi protein)
+    # 3. Tạo dictionary
     ensp_to_gene = (
-        preferred.groupby("protein_id")["alias"]
+        preferred.groupby("protein_id")["alias_upper"]
         .first()
-        .astype(str)       # Ép kiểu về chuỗi
-        .str.strip()       # Xóa khoảng trắng 2 đầu
-        .str.upper()       # ÉP TOÀN BỘ THÀNH CHỮ IN HOA
         .to_dict()
     )
     print(f"{len(ensp_to_gene):,} proteins mapped")
@@ -255,7 +274,7 @@ def _load_ppi_edges(
     seen = set()  # tránh duplicate
 
     debug_ppi_printed = False
-    
+
     for chunk in pd.read_csv(
         links_file, sep=" ", chunksize=500_000,
         dtype={"protein1": str, "protein2": str, "combined_score": int},
