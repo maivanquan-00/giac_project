@@ -244,6 +244,11 @@ def _load_ppi_edges(
     )
     print(f"{len(ensp_to_gene):,} proteins mapped")
 
+    # BẠN THÊM ĐOẠN DEBUG NÀY VÀO ĐÂY NHÉ:
+    print(f"   [Debug PPI] 3 ENSP keys in dict: {list(ensp_to_gene.keys())[:3]}")
+    print(f"   [Debug PPI] 3 Symbols in dict  : {list(ensp_to_gene.values())[:3]}")
+    print(f"   [Debug PPI] 3 Node Gene list   : {list(gene_idx.keys())[:3]}")
+
     # Đọc links file theo chunk
     print("   Parsing STRING links...", end=" ", flush=True)
     src_list, dst_list = [], []
@@ -260,6 +265,11 @@ def _load_ppi_edges(
             p1 = row[0]
             p2 = row[1]
 
+            # IN RA ĐỂ SO SÁNH (chỉ in 1 lần)
+            if not debug_ppi_printed:
+                print(f"   [Debug PPI] Raw File - p1: '{p1}', p2: '{p2}'")
+                debug_ppi_printed = True
+                
             # Khi lấy ra cũng cần strip và upper để đảm bảo khớp 100%
             g1 = ensp_to_gene.get(p1, "").strip().upper()
             g2 = ensp_to_gene.get(p2, "").strip().upper()
